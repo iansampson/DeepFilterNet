@@ -411,8 +411,9 @@ class DfOp(nn.Module):
         padded = as_strided(
             spec[..., : self.df_bins, :].squeeze(1), self.df_order, self.df_lookahead, dim=-3
         )
-        spec_f = torch.sum(torch.view_as_complex(padded) * torch.view_as_complex(coefs), dim=2)
-        spec_f = torch.view_as_real(spec_f)
+        spec_f = complex_multiply_and_sum(padded, coefs)
+        # spec_f = torch.sum(torch.view_as_complex(padded) * torch.view_as_complex(coefs), dim=2)
+        # spec_f = torch.view_as_real(spec_f)
         return assign_df(spec, spec_f.unsqueeze(1), self.df_bins, alpha)
 
     def forward_real_no_pad_one_step(
@@ -462,6 +463,15 @@ class DfOp(nn.Module):
             ).squeeze(2)
         return spec_out
 
+# TODO: Make dimension generic
+def complex_multiply_and_sum(a, b):
+    (real1, imag1) = torch.unbind(a, dim=-1)
+    (real2, imag2) = torch.unbind(b, dim=-1)
+    x = real1 * real2 - imag1 * imag2
+    y = real1 * imag2 + imag1 * real2
+    x = torch.sum(x, dim=2)
+    y = torch.sum(y, dim=2)
+    return torch.stack((x, y), dim=-1)
 
 def assign_df(spec: Tensor, spec_f: Tensor, df_bins: int, alpha: Optional[Tensor]):
     spec_out = spec.clone()
