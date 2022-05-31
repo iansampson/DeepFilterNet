@@ -13,8 +13,11 @@ from df.stoi import stoi
 from df.utils import angle, as_complex, get_device
 from libdf import DF
 
+print("import loss")
+
 
 def wg(S: Tensor, X: Tensor, eps: float = 1e-10) -> Tensor:
+    print("loss.py/wg")
     N = X - S
     SS = as_complex(S).abs().square()
     NN = as_complex(N).abs().square()
@@ -22,6 +25,7 @@ def wg(S: Tensor, X: Tensor, eps: float = 1e-10) -> Tensor:
 
 
 def irm(S: Tensor, X: Tensor, eps: float = 1e-10) -> Tensor:
+    print("loss.py/irm")
     N = X - S
     SS_mag = as_complex(S).abs()
     NN_mag = as_complex(N).abs()
@@ -29,6 +33,7 @@ def irm(S: Tensor, X: Tensor, eps: float = 1e-10) -> Tensor:
 
 
 def iam(S: Tensor, X: Tensor, eps: float = 1e-10) -> Tensor:
+    print("loss.py/iam")
     SS_mag = as_complex(S).abs()
     XX_mag = as_complex(X).abs()
     return (SS_mag / (XX_mag + eps)).clamp(0, 1)

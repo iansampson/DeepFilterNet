@@ -28,6 +28,7 @@ def spec_figure(
         spec = torch.stft(spec, n_fft, hop, window=w, return_complex=False)
         spec = spec.div_(w.pow(2).sum().sqrt())
     if torch.is_complex(spec) or spec.shape[-1] == 2:
+        print("visualization.py/spec_figure")
         spec = as_complex(spec).abs().add_(1e-12).log10_().mul_(20)
     if (
         kwargs.get("vmax", None) is not None
@@ -79,6 +80,7 @@ def specshow(
 ):
     """Plots a spectrogram of shape [F, T]"""
     if raw_in or spec.shape[-1] == 2:
+        print("visualization.py/specshow")
         spec = as_complex(torch.as_tensor(spec)).abs().add_(1e-12).log10_().mul_(20)
     if spec.dim() > 2:
         spec = spec.squeeze()

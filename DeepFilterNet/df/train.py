@@ -567,6 +567,7 @@ def summary_write(
     snr = snrs[idx].detach().cpu().item()
 
     def synthesis(x: Tensor) -> Tensor:
+        print("train.py/summary_write.synthesis")
         return torch.as_tensor(state.synthesis(make_np(as_complex(x.detach()))))
 
     if mask_loss is not None:

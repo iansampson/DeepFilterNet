@@ -63,6 +63,7 @@ def get_device():
 
 
 def as_complex(x: Tensor):
+    print("utils.py/as_complex")
     if torch.is_complex(x):
         return x
     if x.shape[-1] != 2:
@@ -103,6 +104,7 @@ class angle(Function):
 
     @staticmethod
     def backward(ctx, grad: Tensor):
+        print("utils.py/angle.backward")
         (x,) = ctx.saved_tensors
         grad_inv = grad / (x.real.square() + x.imag.square()).clamp_min_(1e-10)
         return torch.view_as_complex(torch.stack((-x.imag * grad_inv, x.real * grad_inv), dim=-1))

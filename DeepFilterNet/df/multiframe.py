@@ -51,6 +51,7 @@ class MultiFrameModule(nn.Module, ABC):
         return spec.unsqueeze(-1)
 
     def forward(self, spec: Tensor, coefs: Tensor):
+        print("MultiFrameModule.forward")
         """Pads and unfolds the spectrogram and forwards to impl.
 
         Args:

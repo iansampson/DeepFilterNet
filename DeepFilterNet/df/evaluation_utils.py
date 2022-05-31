@@ -68,6 +68,7 @@ def enhance(model, df_state, audio, f_hp_cutoff: Optional[int] = None):
         model.reset_h0(batch_size=1, device=get_device())
     spec, erb_feat, spec_feat = df_features(audio, df_state, get_device())
     spec = model(spec, erb_feat, spec_feat)[0].squeeze(0)  # [C, T, F, 2]
+    print("evaluation_utils.py/enhance")
     audio = df_state.synthesis(as_complex(spec).cpu().numpy())
     if f_hp_cutoff is not None:
         audio = highpass_biquad(

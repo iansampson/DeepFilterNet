@@ -794,6 +794,7 @@ class LocalSnrTarget(nn.Module):
         # clean: [B, 1, T, F]
         # out: [B, T']
         if max_bin is not None:
+            print("LocalSnrTarget.set_forward")
             clean = as_complex(clean[..., :max_bin])
             noise = as_complex(noise[..., :max_bin])
         return (
@@ -910,6 +911,8 @@ def test_erb():
 def test_unit_norm():
     from df.config import config
     from libdf import unit_norm
+
+    print("test_unit_norm()")
 
     config.use_defaults()
     p = ModelParams()
