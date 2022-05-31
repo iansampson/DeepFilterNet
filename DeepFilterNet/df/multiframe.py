@@ -58,13 +58,15 @@ class MultiFrameModule(nn.Module, ABC):
             spec (Tensor): Spectrogram of shape [B, C, T, F, 2]
             coefs (Tensor): Spectrogram of shape [B, C, T, F, 2]
         """
-        spec_u = self.spec_unfold(torch.view_as_complex(spec))
-        coefs = torch.view_as_complex(coefs)
+        # spec_u = self.spec_unfold(torch.view_as_complex(spec))
+        spec_u = self.spec_unfold(spec)
+        # coefs = torch.view_as_complex(coefs)
         spec_f = spec_u.narrow(-2, 0, self.num_freqs)
         spec_f = self.forward_impl(spec_f, coefs)
         if self.training:
             spec = spec.clone()
-        spec[..., : self.num_freqs, :] = torch.view_as_real(spec_f)
+        # spec[..., : self.num_freqs, :] = torch.view_as_real(spec_f)
+        spec[..., : self.num_freqs, :] = spec_f
         return spec
 
     @abstractmethod
