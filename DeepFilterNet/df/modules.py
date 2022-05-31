@@ -724,9 +724,13 @@ class GroupedLinearEinsum(nn.Module):
         new_shape = list(x.shape)[:-1] + list((self.groups, self.ws)) + list(x.shape)[:0]
         x = x.view(*new_shape)
         # x = x.unflatten(-1, (self.groups, self.ws))  # [..., G, I/G]
-        x = torch.einsum("...gi,...gih->...gh", x, self.weight)  # [..., G, H/G]
+        x = einsum(x, self.weight)
+        # x = torch.einsum("...gi,...gih->...gh", x, self.weight)  # [..., G, H/G]
         x = x.flatten(2, 3)  # [B, T, H]
         return x
+
+    def einsum(a: Tensor, b: Tensor):
+        return torch.max(torch.matmul(torch.unsqueeze(a, 2), b), axis=2)
 
 
 class GroupedLinear(nn.Module):
