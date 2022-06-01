@@ -393,7 +393,7 @@ class DfOp(nn.Module):
         )
         print("forward_real_unfold")
         print("padded.shape:", padded.shape)
-        print("self.df_order":self.df_order)
+        print("self.df_order:", self.df_order)
         print("padded.unfold(dimension=1, size=self.df_order, step=1)")
         padded = padded.unfold(dimension=1, size=self.df_order, step=1)  # [B, T, F, 2, O]
         padded = padded.permute(0, 1, 4, 2, 3)
