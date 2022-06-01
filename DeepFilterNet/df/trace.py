@@ -22,6 +22,95 @@ from libdf import DF, erb, erb_norm, unit_norm
 
 import coremltools as ct
 
+from coremltools.converters.mil.frontend.torch.torch_op_registry import
+     _TORCH_OPS_REGISTRY, register_torch_op
+from coremltools.converters.mil.frontend.torch.ops import _get_inputs
+from coremltools.converters.mil import Builder as mb
+import numpy as _np
+
+def _transpose_NHWC_to_NCHW(x):
+    return mb.transpose(x=x, perm=[0, 3, 1, 2])
+
+@register_torch_op
+# TODO: Integrate with unfold
+def extract_image_patches(context, node):
+    inputs = _get_inputs(context, node)
+
+    x = inputs[0]
+    sizes = inputs[1]
+    strides = inputs[2]
+    rates = inputs[3]
+    padding = inputs[4]
+
+    if x.dim != 4:
+        raise ValueError("input for ExtractImagePatches should be a 4D tensor.")
+    if not all([rate == 1 for rate in rates]):
+        raise NotImplementedError(
+            "only rates with all 1s is implemented for ExtractImagePatches."
+        )
+    if len(sizes) != 4 or sizes[0] != 1 or sizes[3] != 1:
+        raise ValueError(
+            "ExtractImagePatches only supports sizes (4D tensor) with 1s for batch and channel dimensions."
+        )
+    if len(sizes) != 4 or strides[0] != 1 or strides[3] != 1:
+        raise ValueError(
+            "ExtractImagePatches only supports strides (4D tensor) with 1s for batch and channel dimensions."
+        )
+    if not padding in ["VALID", "SAME"]:
+        raise ValueError("non-supported padding for ExtractImagePatches.")
+    h, w = x.shape[1], x.shape[2]
+
+    # padding for SAME mode
+    if padding == "SAME":
+        delta_h = h % strides[1] if h % strides[1] != 0 else strides[1]
+        delta_w = w % strides[2] if w % strides[2] != 0 else strides[2]
+        last_h = h - delta_h + 1
+        last_w = w - delta_w + 1
+        pad_h = max(0, last_h + sizes[1] - 1 - h)
+        pad_w = max(0, last_w + sizes[2] - 1 - w)
+        pad_h = [pad_h // 2, pad_h // 2 if pad_h % 2 == 0 else pad_h // 2 + 1]
+        pad_w = [pad_w // 2, pad_w // 2 if pad_w % 2 == 0 else pad_w // 2 + 1]
+        pad = _np.array([[0, 0], pad_h, pad_w, [0, 0]]).astype(_np.int32)
+        pad = pad.reshape(-1)
+        if not all(pad == 0):
+            x = mb.pad(x=x, pad=pad, mode="constant", constant_val=0.0)
+            h, w = x.shape[1], x.shape[2]
+
+    # compute boxes
+    batch = x.shape[0]
+    boxes = []
+    h_index = list(range(0, h - sizes[1] + 1, strides[1]))
+    w_index = list(range(0, w - sizes[2] + 1, strides[2]))
+    for hi in h_index:
+        for wi in w_index:
+            boxes.append((hi, wi, hi + sizes[1] - 1, wi + sizes[2] - 1))
+
+    boxes = _np.array(boxes)
+    box_indices = _np.arange(batch)
+    box_indices = _np.tile(box_indices, (len(boxes), 1))
+    box_indices = _np.transpose(box_indices)
+    box_indices = box_indices.reshape(-1, 1)
+    boxes = _np.tile(boxes, (batch, 1))
+    boxes = _np.concatenate([box_indices, boxes], axis=1)
+    boxes = boxes.reshape(boxes.shape[0], 1, boxes.shape[1], 1, 1)
+
+    # use crop_and_resize
+    x = _transpose_NHWC_to_NCHW(x)
+    x = mb.crop_resize(
+        x=x,
+        roi=boxes,
+        target_height=sizes[1],
+        target_width=sizes[2],
+        normalized_coordinates=False,
+        spatial_scale=1.0,
+        box_coordinate_mode="CORNERS_HEIGHT_FIRST",
+        sampling_mode="ALIGN_CORNERS",
+    )
+    x = mb.squeeze(x=x, axes=[1])
+    x = _transpose_NCHW_to_NHWC(x, node_name=node.name + "_transpose_to_nhwc")
+    x = mb.reshape(x=x, shape=(batch, len(h_index), len(w_index), -1), name=node.name)
+    context.add(node.name, x)
+
 def main(args):
     model, df_state, suffix = init_df(
         args.model_base_dir,

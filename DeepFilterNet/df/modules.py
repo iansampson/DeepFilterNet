@@ -391,6 +391,10 @@ class DfOp(nn.Module):
         padded = spec_pad(
             spec[..., : self.df_bins, :].squeeze(1), self.df_order, self.df_lookahead, dim=-3
         )
+        print("forward_real_unfold")
+        print("padded.shape:", padded.shape)
+        print("self.df_order":self.df_order)
+        print("padded.unfold(dimension=1, size=self.df_order, step=1)")
         padded = padded.unfold(dimension=1, size=self.df_order, step=1)  # [B, T, F, 2, O]
         padded = padded.permute(0, 1, 4, 2, 3)
         spec_f = torch.empty_like(padded)
@@ -810,6 +814,11 @@ def _local_energy(x: Tensor, ws: int, device: torch.device) -> Tensor:
     ws_half = ws // 2
     x = F.pad(x.pow(2).sum(-1).sum(-1), (ws_half, ws_half, 0, 0))
     w = torch.hann_window(ws, device=device, dtype=x.dtype)
+    print("_local_energy")
+    print("x.shape:", x.shape)
+    print("ws:", ws)
+    print("w:", w)
+    print("x.unfold(-1, size=ws, step=1) * w")
     x = x.unfold(-1, size=ws, step=1) * w
     return torch.sum(x, dim=-1).div(ws)
 

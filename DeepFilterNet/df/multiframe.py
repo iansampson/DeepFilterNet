@@ -47,18 +47,21 @@ class MultiFrameModule(nn.Module, ABC):
             spec (Tensor): Unfolded spectrogram of shape [B, C, T, F, N], where N: frame_size.
         """
         if self.need_unfold:
+            print("spec_unfold")
+            print("self.frame_size", self.frame_size)
+            print("self.pad(spec).unfold(2, self.frame_size, 1)")
+            print("self.pad(spec).shape", self.pad(spec).shape)
             return self.pad(spec).unfold(2, self.frame_size, 1)
         return spec.unsqueeze(-1)
 
     def forward(self, spec: Tensor, coefs: Tensor):
-        print("MultiFrameModule.forward")
         """Pads and unfolds the spectrogram and forwards to impl.
 
         Args:
             spec (Tensor): Spectrogram of shape [B, C, T, F, 2]
             coefs (Tensor): Spectrogram of shape [B, C, T, F, 2]
         """
-        
+
         (spec_real, spec_imag) = torch.unbind(spec, dim=-1)
 
         spec_u_real = self.spec_unfold(spec_real)
@@ -71,6 +74,7 @@ class MultiFrameModule(nn.Module, ABC):
 
         spec_f_real, spec_f_imag = self.forward_impl(spec_f_real, spec_f_imag, coefs_real, coefs_imag)
 
+        # TODO: Uncomment if you ever use this branch for training
         # if self.training:
         #     spec = spec.clone()
 
@@ -112,6 +116,10 @@ def psd(x: Tensor, n: int) -> Tensor:
     Returns:
         Rxx (complex Tensor): Correlation matrix of shape [B, C, T, F, N, N]
     """
+    print("psd")
+    print("n:", n)
+    print("F.pad(x, (0, 0, n - 1, 0)).unfold(-2, n, 1)")
+    print("F.pad(x, (0, 0, n - 1, 0)).shape", shape)
     x = F.pad(x, (0, 0, n - 1, 0)).unfold(-2, n, 1)
     return torch.einsum("...n,...m->...mn", x, x.conj())
 
