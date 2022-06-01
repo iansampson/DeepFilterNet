@@ -22,8 +22,7 @@ from libdf import DF, erb, erb_norm, unit_norm
 
 import coremltools as ct
 
-from coremltools.converters.mil.frontend.torch.torch_op_registry import
-     _TORCH_OPS_REGISTRY, register_torch_op
+from coremltools.converters.mil.frontend.torch.torch_op_registry import _TORCH_OPS_REGISTRY, register_torch_op
 from coremltools.converters.mil.frontend.torch.ops import _get_inputs
 from coremltools.converters.mil import Builder as mb
 import numpy as _np
