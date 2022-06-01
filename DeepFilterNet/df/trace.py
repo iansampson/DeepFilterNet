@@ -41,7 +41,8 @@ def unfold(context, node):
 
     # Check whether permutation is needed
     # Assumes tensor of shape [B, H, W, C]
-    x = x.permute(0, 2, 3, 1)
+    # x = x.permute(0, 2, 3, 1)
+    x = mb.transpose(x=x, perm=[0, 2, 3, 1])
 
     if dimension == 2:
         sizes = [1, size, 1, 1]
