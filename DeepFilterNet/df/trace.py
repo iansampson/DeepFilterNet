@@ -31,15 +31,41 @@ def _transpose_NHWC_to_NCHW(x):
     return mb.transpose(x=x, perm=[0, 3, 1, 2])
 
 @register_torch_op
-# TODO: Integrate with unfold
-def extract_image_patches(context, node):
+def unfold(context, node):
     inputs = _get_inputs(context, node)
 
     x = inputs[0]
-    sizes = inputs[1]
-    strides = inputs[2]
-    rates = inputs[3]
-    padding = inputs[4]
+    dimension = inputs[1]
+    size = inputs[2]
+    step = inputs[3]
+
+    # Check whether permutation is needed
+    # Assumes tensor of shape [B, H, W, C]
+    x = x.permute(0, 2, 3, 1)
+
+    if dimension == 2:
+        sizes = [1, size, 1, 1]
+        strides = [1, 1, 1, 1]
+        # Handle different step sizes
+    else:
+        raise ValueError("only dimension 2 is implemented for Unfold")
+
+    if step != 1:
+        raise ValueError("only step size 2 is implemented for Unfold")
+
+    rates=[1, 1, 1, 1]
+    padding='VALID'
+
+# @register_torch_op
+# TODO: Integrate with unfold
+# def extract_image_patches(context, node):
+    # inputs = _get_inputs(context, node)
+
+    # x = inputs[0]
+    # sizes = inputs[1]
+    # strides = inputs[2]
+    # rates = inputs[3]
+    # padding = inputs[4]
 
     if x.dim != 4:
         raise ValueError("input for ExtractImagePatches should be a 4D tensor.")
