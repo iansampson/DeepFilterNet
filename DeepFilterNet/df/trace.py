@@ -36,7 +36,7 @@ def unfold(context, node):
     size = inputs[2]
     step = inputs[3]
 
-    x = mb.sliding_windows(x, dimension, size, step)
+    x = mb.sliding_windows(x, axis=dimension, size=size, stride=step)
     context.add(x)
 
 def main(args):
