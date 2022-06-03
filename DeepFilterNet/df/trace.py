@@ -44,14 +44,15 @@ def narrow(context, node):
     inputs = _get_inputs(context, node)
 
     x = inputs[0]
-    dimension = inputs[1]
-    start = inputs[2]
-    length = inputs[3]
+    dimension = inputs[1].val
+    start = inputs[2].val
+    length = inputs[3].val
 
+    dimension = dimension if dimension >= 0 else len(x.shape) + dimension
     begin = [0] * len(x.shape)
-    begin[dimension.val] = start.val
+    begin[dimension] = start
     end = list(x.shape)
-    end[dimension.val] = start.val + length.val
+    end[dimension] = start + length
 
     x = mb.slice_by_index(x=x, begin=begin, end=end)
     context.add(x, torch_name=node.name)
