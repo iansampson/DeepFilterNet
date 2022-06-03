@@ -37,7 +37,24 @@ def unfold(context, node):
     step = inputs[3]
 
     x = mb.sliding_windows(x=x, axis=dimension, size=size, stride=step)
-    context.add(x)
+    context.add(x, torch_name=node.name)
+
+@register_torch_op
+def narrow(context, node):
+    inputs = _get_inputs(context, node)
+
+    x = inputs[0]
+    dimension = inputs[1]
+    start = inputs[2]
+    length = inputs[3]
+
+    begin = [0] * len(x.shape)
+    begin[dimension.val] = start.val
+    end = list(x.shape)
+    end[dimension.val] = start.val + length.val
+
+    x = mb.slice_by_index(x=x, begin=begin, end=end)
+    context.add(x, torch_name=node.name)
 
 def main(args):
     model, df_state, suffix = init_df(
