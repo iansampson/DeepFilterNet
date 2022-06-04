@@ -48,11 +48,24 @@ def narrow(context, node):
     start = inputs[2].val
     length = inputs[3].val
 
+    # TODO: Consider making begin a Var as well (e.g. with mb.fill)
     dimension = dimension if dimension >= 0 else len(x.shape) + dimension
-    begin = [0] * len(x.shape)
+    begin = [0] * len(x.shape) # same as x.rank?
     begin[dimension] = start
-    end = list(x.shape)
-    end[dimension] = start + length
+
+    # TODO: Assign value to x with subscript
+    end = mb.shape(x=x)
+    cond = [True] * len(x.shape)
+    cond[dimension] = False
+    b = [start + length] * len(x.shape)
+    end = mb.select(cond=cond, a=end, b=b)
+
+    # y = [1] * len(x.shape)
+    # y[dimension] = 0
+    # z = begin
+    # z[dimension] = start + length
+    # end = mb.mul(x=end, y=y)
+    # end = mb.add(x=end, y=z)
 
     x = mb.slice_by_index(x=x, begin=begin, end=end)
     context.add(x, torch_name=node.name)

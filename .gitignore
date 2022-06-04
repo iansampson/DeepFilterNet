@@ -1,3 +1,6 @@
+envs
+.DS_Store
+
 # Own stuff
 *.wav
 *.png

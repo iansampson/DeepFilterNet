@@ -47,10 +47,6 @@ class MultiFrameModule(nn.Module, ABC):
             spec (Tensor): Unfolded spectrogram of shape [B, C, T, F, N], where N: frame_size.
         """
         if self.need_unfold:
-            print("spec_unfold")
-            print("self.frame_size", self.frame_size)
-            print("self.pad(spec).unfold(2, self.frame_size, 1)")
-            print("self.pad(spec).shape", self.pad(spec).shape)
             return self.pad(spec).unfold(2, self.frame_size, 1)
         return spec.unsqueeze(-1)
 
