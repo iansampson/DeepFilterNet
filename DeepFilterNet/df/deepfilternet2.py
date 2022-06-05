@@ -453,7 +453,7 @@ class DfNet(nn.Module):
                 spec_slice = spec[..., self.nb_df:, :]
                 z = torch.cat((spec_f_slice, spec_slice), 3)
 
-                print(z == y)
+                # print(z == y)
 
                 spec = z
             else:

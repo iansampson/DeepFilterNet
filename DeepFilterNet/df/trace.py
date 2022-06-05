@@ -311,7 +311,7 @@ def enhance(
     spec, erb_feat, spec_feat = df_features(audio, df_state, nb_df, device=get_device())
 
     # Convert model to CoreML
-    # traced_model = torch.jit.trace(model, (spec, erb_feat, spec_feat))
+    traced_model = torch.jit.trace(model, (spec, erb_feat, spec_feat))
 
     spec_shape = ct.Shape(shape=(1, 1, ct.RangeDim(), 481, 2))
     spec_tensor = ct.TensorType(shape=spec_shape)
@@ -322,18 +322,18 @@ def enhance(
     spec_feat_shape = ct.Shape(shape=(1, 1, ct.RangeDim(), 96, 2))
     spec_feat_tensor = ct.TensorType(shape=spec_feat_shape)
 
-    # core_ml_model = ct.convert(traced_model,
-    #                            inputs=[spec_tensor, erb_tensor, spec_feat_tensor],
-    #                            convert_to="mlprogram",
-    #                            compute_precision=ct.precision.FLOAT32)
-    # core_ml_model.save("DeepFilterNet.mlpackage")
+    core_ml_model = ct.convert(traced_model,
+                               inputs=[spec_tensor, erb_tensor, spec_feat_tensor],
+                               convert_to="mlprogram",
+                               compute_precision=ct.precision.FLOAT32)
+    core_ml_model.save("DeepFilterNet.mlpackage")
 
-    torch_enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+    # torch_enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
 
-    # core_ml_output = core_ml_model.predict({"spec_1": spec.numpy(),
-    #                                         "feat_erb": erb_feat.numpy(),
-    #                                         "feat_spec": spec_feat.numpy()})
-    # enhanced = torch.from_numpy(core_ml_output["var_611"])
+    core_ml_output = core_ml_model.predict({"spec_1": spec.numpy(),
+                                            "feat_erb": erb_feat.numpy(),
+                                            "feat_spec": spec_feat.numpy()})
+    enhanced = torch.from_numpy(core_ml_output["var_678"])
 
     # diff = torch.mean(torch_enhanced - enhanced)
     # print(diff)
@@ -347,7 +347,7 @@ def enhance(
     # print(core_ml_output["var_563"].shape)
     # print(core_ml_output["var_230"].shape)
 
-    enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+    # enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
     enhanced = as_complex(enhanced.squeeze(1))
     if atten_lim_db is not None and abs(atten_lim_db) > 0:
         lim = 10 ** (-abs(atten_lim_db) / 20)

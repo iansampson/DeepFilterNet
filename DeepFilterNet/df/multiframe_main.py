@@ -18,9 +18,9 @@ class MultiFrameModule(nn.Module, ABC):
         IFC: Inter-frame correlation vector: PSD*u, u: selection vector. Notated as `rxx`
     """
 
-    num_freqs: int
-    frame_size: int
-    need_unfold: bool
+    num_freqs: Final[int]
+    frame_size: Final[int]
+    need_unfold: Final[bool]
 
     def __init__(self, num_freqs: int, frame_size: int, lookahead: int = 0):
         """Multi-Frame filtering module.
@@ -57,36 +57,14 @@ class MultiFrameModule(nn.Module, ABC):
             spec (Tensor): Spectrogram of shape [B, C, T, F, 2]
             coefs (Tensor): Spectrogram of shape [B, C, T, F, 2]
         """
-
-        (spec_real, spec_imag) = torch.unbind(spec, dim=-1)
-
-        spec_u_real = self.spec_unfold(spec_real)
-        spec_u_imag = self.spec_unfold(spec_imag)
-
-        (coefs_real, coefs_imag) = torch.unbind(coefs, dim=-1)
-
-        spec_f_real = spec_u_real.narrow(-2, 0, self.num_freqs)
-        spec_f_imag = spec_u_imag.narrow(-2, 0, self.num_freqs)
-
-        spec_f_real, spec_f_imag = self.forward_impl(spec_f_real, spec_f_imag, coefs_real, coefs_imag)
-
-        # TODO: Uncomment if you ever use this branch for training
-        # if self.training:
-        #     spec = spec.clone()
-
-        stack = torch.stack((spec_f_real, spec_f_imag), dim=4)
-
-        # Use cat instead of subscript assignment (i.e. slice)
-        # to work around an error in the CoreML converter
-        y = spec.detach().clone()
-        y[..., : self.num_freqs, :] = stack
-
-        slice = spec[..., self.num_freqs:, :]
-        z = torch.cat((stack, slice), 3)
-
-        # print(z == y)
-
-        return z
+        spec_u = self.spec_unfold(torch.view_as_complex(spec))
+        coefs = torch.view_as_complex(coefs)
+        spec_f = spec_u.narrow(-2, 0, self.num_freqs)
+        spec_f = self.forward_impl(spec_f, coefs)
+        if self.training:
+            spec = spec.clone()
+        spec[..., : self.num_freqs, :] = torch.view_as_real(spec_f)
+        return spec
 
     @abstractmethod
     def forward_impl(self, spec: Tensor, coefs: Tensor) -> Tensor:
@@ -123,16 +101,11 @@ def psd(x: Tensor, n: int) -> Tensor:
     Returns:
         Rxx (complex Tensor): Correlation matrix of shape [B, C, T, F, N, N]
     """
-    print("psd")
-    print("n:", n)
-    print("F.pad(x, (0, 0, n - 1, 0)).unfold(-2, n, 1)")
-    print("F.pad(x, (0, 0, n - 1, 0)).shape", shape)
     x = F.pad(x, (0, 0, n - 1, 0)).unfold(-2, n, 1)
     return torch.einsum("...n,...m->...mn", x, x.conj())
 
 
-# TODO: Anotate return type
-def df(spec_real: Tensor, spec_imag: Tensor, coefs_real: Tensor, coefs_imag: Tensor):
+def df(spec: Tensor, coefs: Tensor) -> Tensor:
     """Deep filter implemenation using `torch.einsum`. Requires unfolded spectrogram.
 
     Args:
@@ -142,15 +115,7 @@ def df(spec_real: Tensor, spec_imag: Tensor, coefs_real: Tensor, coefs_imag: Ten
     Returns:
         spec (complex Tensor): Spectrogram of shape [B, C, T, F]
     """
-
-    coefs_real = torch.transpose(torch.transpose(coefs_real, -3, -2), -2, -1)
-    coefs_imag = torch.transpose(torch.transpose(coefs_imag, -3, -2), -2, -1)
-
-    x_real, x_imag = complex_multiply(spec_real, spec_imag, coefs_real, coefs_imag)
-    x_real = x_real.sum(dim=-1)
-    x_imag = x_imag.sum(dim=-1)
-
-    return x_real, x_imag
+    return torch.einsum("...tfn,...ntf->...tf", spec, coefs)
 
 
 class CRM(MultiFrameModule):
@@ -168,28 +133,22 @@ class CRM(MultiFrameModule):
 
 
 class DF(MultiFrameModule):
-    conj: bool
+    conj: Final[bool]
     """Deep Filtering."""
 
     def __init__(self, num_freqs: int, frame_size: int, lookahead: int = 0, conj: bool = False):
         super().__init__(num_freqs, frame_size, lookahead)
         self.conj = conj
 
-    def forward_impl(self, spec_real: Tensor, spec_imag: Tensor, coefs_real: Tensor, coefs_imag: Tensor):
-        coefs_real = coefs_real.view(coefs_real.shape[0], -1, self.frame_size, *coefs_real.shape[2:])
-        coefs_imag = coefs_imag.view(coefs_imag.shape[0], -1, self.frame_size, *coefs_imag.shape[2:])
+    def forward_impl(self, spec: Tensor, coefs: Tensor):
+        coefs = coefs.view(coefs.shape[0], -1, self.frame_size, *coefs.shape[2:])
         if self.conj:
-            coefs_real = coefs_real.conj()
-            coefs_imag = coefs_imag.conj()
-        return df(spec_real, spec_imag, coefs_real, coefs_imag)
+            coefs = coefs.conj()
+        return df(spec, coefs)
 
     def num_channels(self):
         return self.frame_size * 2
 
-def complex_multiply(real1, imag1, real2, imag2):
-    real = real1 * real2 - imag1 * imag2
-    imag = real1 * imag2 + imag1 * real2
-    return real, imag
 
 class MfWf(MultiFrameModule):
     """Multi-frame Wiener filter base module."""

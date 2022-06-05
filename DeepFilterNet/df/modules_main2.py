@@ -391,10 +391,6 @@ class DfOp(nn.Module):
         padded = spec_pad(
             spec[..., : self.df_bins, :].squeeze(1), self.df_order, self.df_lookahead, dim=-3
         )
-        print("forward_real_unfold")
-        print("padded.shape:", padded.shape)
-        print("self.df_order:", self.df_order)
-        print("padded.unfold(dimension=1, size=self.df_order, step=1)")
         padded = padded.unfold(dimension=1, size=self.df_order, step=1)  # [B, T, F, 2, O]
         padded = padded.permute(0, 1, 4, 2, 3)
         spec_f = torch.empty_like(padded)
@@ -415,9 +411,8 @@ class DfOp(nn.Module):
         padded = as_strided(
             spec[..., : self.df_bins, :].squeeze(1), self.df_order, self.df_lookahead, dim=-3
         )
-        spec_f = complex_multiply_and_sum(padded, coefs)
-        # spec_f = torch.sum(torch.view_as_complex(padded) * torch.view_as_complex(coefs), dim=2)
-        # spec_f = torch.view_as_real(spec_f)
+        spec_f = torch.sum(torch.view_as_complex(padded) * torch.view_as_complex(coefs), dim=2)
+        spec_f = torch.view_as_real(spec_f)
         return assign_df(spec, spec_f.unsqueeze(1), self.df_bins, alpha)
 
     def forward_real_no_pad_one_step(
@@ -467,15 +462,6 @@ class DfOp(nn.Module):
             ).squeeze(2)
         return spec_out
 
-# TODO: Make dimension generic
-def complex_multiply_and_sum(a, b):
-    (real1, imag1) = torch.unbind(a, dim=-1)
-    (real2, imag2) = torch.unbind(b, dim=-1)
-    x = real1 * real2 - imag1 * imag2
-    y = real1 * imag2 + imag1 * real2
-    x = torch.sum(x, dim=2)
-    y = torch.sum(y, dim=2)
-    return torch.stack((x, y), dim=-1)
 
 def assign_df(spec: Tensor, spec_f: Tensor, df_bins: int, alpha: Optional[Tensor]):
     spec_out = spec.clone()
@@ -740,7 +726,7 @@ class GroupedLinearEinsum(nn.Module):
         new_shape = list(x.shape)[:-1] + list((self.groups, self.ws)) + list(x.shape)[:0]
         x = x.view(*new_shape)
 
-        print("einsum 7:45 + coreml")
+        print("einsum 7:45")
         # x = torch.einsum("...gi,...gih->...gh", x, self.weight)  # [..., G, H/G]
         # x = torch.max(torch.matmul(torch.unsqueeze(x, 2), self.weight), axis=2).values
         x1 = x.unsqueeze(-1)
@@ -751,6 +737,26 @@ class GroupedLinearEinsum(nn.Module):
         x = x.flatten(2, 3)  # [B, T, H]
         return x
 
+    """
+    def forward(self, x: Tensor) -> Tensor:
+        # x: [..., I]
+        new_shape = list(x.shape)[:-1] + list((self.groups, self.ws)) + list(x.shape)[:0]
+        x = x.view(*new_shape)
+        # x = x.unflatten(-1, (self.groups, self.ws))  # [..., G, I/G]
+        x = torch.max(torch.matmul(torch.unsqueeze(x, 2), self.weight), axis=2).values
+        # x = torch.einsum("...gi,...gih->...gh", x, self.weight)  # [..., G, H/G]
+        x = x.flatten(2, 3)  # [B, T, H]
+        return x
+    """
+
+    """
+    def forward(self, x: Tensor) -> Tensor:
+        # x: [..., I]
+        x = x.unflatten(-1, (self.groups, self.ws))  # [..., G, I/G]
+        x = torch.einsum("...gi,...gih->...gh", x, self.weight)  # [..., G, H/G]
+        x = x.flatten(2, 3)  # [B, T, H]
+        return x
+    """
 
 class GroupedLinear(nn.Module):
     input_size: Final[int]
@@ -806,7 +812,6 @@ class LocalSnrTarget(nn.Module):
         # clean: [B, 1, T, F]
         # out: [B, T']
         if max_bin is not None:
-            print("LocalSnrTarget.set_forward")
             clean = as_complex(clean[..., :max_bin])
             noise = as_complex(noise[..., :max_bin])
         return (
@@ -822,11 +827,6 @@ def _local_energy(x: Tensor, ws: int, device: torch.device) -> Tensor:
     ws_half = ws // 2
     x = F.pad(x.pow(2).sum(-1).sum(-1), (ws_half, ws_half, 0, 0))
     w = torch.hann_window(ws, device=device, dtype=x.dtype)
-    print("_local_energy")
-    print("x.shape:", x.shape)
-    print("ws:", ws)
-    print("w:", w)
-    print("x.unfold(-1, size=ws, step=1) * w")
     x = x.unfold(-1, size=ws, step=1) * w
     return torch.sum(x, dim=-1).div(ws)
 
@@ -928,8 +928,6 @@ def test_erb():
 def test_unit_norm():
     from df.config import config
     from libdf import unit_norm
-
-    print("test_unit_norm()")
 
     config.use_defaults()
     p = ModelParams()
