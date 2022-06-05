@@ -740,7 +740,6 @@ class GroupedLinearEinsum(nn.Module):
         new_shape = list(x.shape)[:-1] + list((self.groups, self.ws)) + list(x.shape)[:0]
         x = x.view(*new_shape)
 
-        print("einsum 7:45 + coreml")
         # x = torch.einsum("...gi,...gih->...gh", x, self.weight)  # [..., G, H/G]
         # x = torch.max(torch.matmul(torch.unsqueeze(x, 2), self.weight), axis=2).values
         x1 = x.unsqueeze(-1)

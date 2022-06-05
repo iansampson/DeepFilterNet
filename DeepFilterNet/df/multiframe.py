@@ -78,8 +78,8 @@ class MultiFrameModule(nn.Module, ABC):
 
         # Use cat instead of subscript assignment (i.e. slice)
         # to work around an error in the CoreML converter
-        y = spec.detach().clone()
-        y[..., : self.num_freqs, :] = stack
+        # y = spec.detach().clone()
+        # y[..., : self.num_freqs, :] = stack
 
         slice = spec[..., self.num_freqs:, :]
         z = torch.cat((stack, slice), 3)

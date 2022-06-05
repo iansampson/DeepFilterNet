@@ -324,16 +324,47 @@ def enhance(
 
     core_ml_model = ct.convert(traced_model,
                                inputs=[spec_tensor, erb_tensor, spec_feat_tensor],
+                               # minimum_deployment_target: ct.target.macOS12,
                                convert_to="mlprogram",
                                compute_precision=ct.precision.FLOAT32)
     core_ml_model.save("DeepFilterNet.mlpackage")
 
-    # torch_enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
-
     core_ml_output = core_ml_model.predict({"spec_1": spec.numpy(),
+    # core_ml_output = core_ml_model.predict({"spec": spec.numpy(),
                                             "feat_erb": erb_feat.numpy(),
                                             "feat_spec": spec_feat.numpy()})
-    enhanced = torch.from_numpy(core_ml_output["var_678"])
+
+    for (key, value) in core_ml_output.items():
+        # print(value.shape)
+        if value.shape == spec.shape:
+            core_ml_enhanced = torch.from_numpy(value)
+    torch_enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+
+    # print(torch_enhanced == spec)
+
+    # print("%%%")
+    # print(core_ml_enhanced)
+    # print(torch_enhanced)
+    # print(torch.isclose(core_ml_enhanced, spec))
+    # print("%%%")
+    # print(torch.isclose(core_ml_enhanced, torch_enhanced))
+
+    # core_ml_enhanced = torch.from_numpy(core_ml_output["var_678"])
+
+    enhanced = core_ml_enhanced
+    # enhanced = torch_enhanced
+    # enhanced = torch_enhanced.narrow(2, 158, 48)
+    # core_ml_enhanced.narrow(2, 158, 387)
+
+    # print(core_ml_enhanced.shape)
+
+    # is_close = torch.isclose(core_ml_enhanced, torch_enhanced)
+    # print(is_close)
+
+    # window size: 480
+    # 75418 / 261600
+    # window: 158 should have some good audio
+    # test
 
     # diff = torch.mean(torch_enhanced - enhanced)
     # print(diff)
@@ -347,7 +378,7 @@ def enhance(
     # print(core_ml_output["var_563"].shape)
     # print(core_ml_output["var_230"].shape)
 
-    # enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+    # enhanced = torch_enhanced
     enhanced = as_complex(enhanced.squeeze(1))
     if atten_lim_db is not None and abs(atten_lim_db) > 0:
         lim = 10 ** (-abs(atten_lim_db) / 20)

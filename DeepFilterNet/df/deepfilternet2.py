@@ -375,7 +375,8 @@ class DfNet(nn.Module):
             self.pad_feat = nn.Identity()
         self.pad_specf = p.pad_mode.endswith("specf")
         if p.df_lookahead > 0 and self.pad_specf:
-            self.pad_spec = nn.ConstantPad3d((0, 0, 0, 0, -p.df_lookahead, p.df_lookahead), 0.0)
+            # self.pad_spec = nn.ConstantPad3d((0, 0, 0, 0, -p.df_lookahead, p.df_lookahead), 0.0)
+            self.pad_spec = nn.ConstantPad3d((0, 0, 0, 0, 0, p.df_lookahead), 0.0)
         else:
             self.pad_spec = nn.Identity()
         if (p.conv_lookahead > 0 or p.df_lookahead > 0) and p.pad_mode.startswith("output"):
@@ -403,7 +404,7 @@ class DfNet(nn.Module):
 
         self.run_df = run_df
         if not run_df:
-            logger.warning("Runing without DF")
+            logger.warning("Running without DF")
         self.train_mask = train_mask
         assert p.df_n_iter == 1
 
@@ -425,6 +426,7 @@ class DfNet(nn.Module):
             m (Tensor): ERB mask estimate of shape [B, 1, T, E]
             lsnr (Tensor): Local SNR estimate of shape [B, T, 1]
         """
+
         feat_spec = feat_spec.squeeze(1).permute(0, 3, 1, 2)
 
         feat_erb = self.pad_feat(feat_erb)
@@ -442,20 +444,15 @@ class DfNet(nn.Module):
             if self.pad_specf:
                 # Only pad the lower part of the spectrum.
                 spec_f = self.pad_spec(spec)
+                # Slice because CoreML does not handle negative padding
+                spec_f = spec_f[:, :, 2:, ...]
                 spec_f = self.df_op(spec_f, df_coefs)
-
-                y = spec.detach().clone()
-                y[..., : self.nb_df, :] = spec_f[..., : self.nb_df, :]
 
                 # Use cat instead of subscript assignment (i.e. slice)
                 # to work around an error in the CoreML converter
                 spec_f_slice = spec_f[..., :self.nb_df, :]
                 spec_slice = spec[..., self.nb_df:, :]
-                z = torch.cat((spec_f_slice, spec_slice), 3)
-
-                # print(z == y)
-
-                spec = z
+                spec = torch.cat((spec_f_slice, spec_slice), 3)
             else:
                 spec = self.pad_spec(spec)
                 spec = self.df_op(spec, df_coefs)
