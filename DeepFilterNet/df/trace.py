@@ -324,10 +324,26 @@ def enhance(
 
     core_ml_model = ct.convert(traced_model,
                                inputs=[spec_tensor, erb_tensor, spec_feat_tensor],
-                               convert_to="mlprogram")
-    core_ml_model.save("DeepFilterNet.mlpackage")
+                               convert_to="mlprogram",
+                               compute_precision=ct.precision.FLOAT32)
+    # core_ml_model.save("DeepFilterNet.mlpackage")
 
-    enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+    torch_enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+
+    core_ml_output = core_ml_model.predict({"spec_1": spec.numpy(),
+                                            "feat_erb": erb_feat.numpy(),
+                                            "feat_spec": spec_feat.numpy()})
+    enhanced = torch.from_numpy(core_ml_output["var_611"])
+
+    # print(core_ml_enhanced - torch_enhanced.numpy())
+
+    # TODO: Consider removing unused outputs from the model
+    # print(core_ml_output["mask_1"].shape)
+    # print(core_ml_output["var_563"].shape)
+    # print(core_ml_output["var_230"].shape)
+
+    # enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+    
     enhanced = as_complex(enhanced.squeeze(1))
     if atten_lim_db is not None and abs(atten_lim_db) > 0:
         lim = 10 ** (-abs(atten_lim_db) / 20)
