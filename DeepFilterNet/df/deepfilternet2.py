@@ -443,7 +443,13 @@ class DfNet(nn.Module):
                 # Only pad the lower part of the spectrum.
                 spec_f = self.pad_spec(spec)
                 spec_f = self.df_op(spec_f, df_coefs)
-                spec[..., : self.nb_df, :] = spec_f[..., : self.nb_df, :]
+
+                # Use cat instead of subscript assignment (i.e. slice)
+                # to work around an error in the CoreML converter
+                spec_slice = spec[..., :self.nb_df, :]
+                spec_f_slice = spec[..., self.nb_df:, :]
+                spec = torch.cat((spec_f_slice, spec_slice), 3)
+                # spec[..., : self.nb_df, :] = spec_f[..., : self.nb_df, :]
             else:
                 spec = self.pad_spec(spec)
                 spec = self.df_op(spec, df_coefs)
