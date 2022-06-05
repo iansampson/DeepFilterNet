@@ -32,11 +32,21 @@ def unfold(context, node):
     inputs = _get_inputs(context, node)
 
     x = inputs[0]
+    x = inputs[0]
     dimension = inputs[1]
     size = inputs[2]
     step = inputs[3]
 
     x = mb.sliding_windows(x=x, axis=dimension, size=size, stride=step)
+
+    perm = list(range(x.rank))
+    print(perm)
+    new_dim = perm.pop(dimension.val + 1)
+    perm.append(new_dim)
+
+    x = mb.transpose(x=x, perm=perm)
+
+    context.add(x, torch_name=node.name)
     context.add(x, torch_name=node.name)
 
 @register_torch_op

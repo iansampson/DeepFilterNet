@@ -74,8 +74,12 @@ class MultiFrameModule(nn.Module, ABC):
         # if self.training:
         #     spec = spec.clone()
 
-        spec[..., : self.num_freqs, :] = torch.stack((spec_f_real, spec_f_imag), dim=-1)
-        return spec
+        stack = torch.stack((spec_f_real, spec_f_imag), dim=4)
+
+        # We use cat instead of subscript assignment (i.e. slice)
+        # to work around an error in the CoreML converter
+        slice = spec[..., 96:, :]
+        return torch.cat((stack, slice), 3)
 
     @abstractmethod
     def forward_impl(self, spec: Tensor, coefs: Tensor) -> Tensor:
