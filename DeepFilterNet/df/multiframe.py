@@ -76,10 +76,17 @@ class MultiFrameModule(nn.Module, ABC):
 
         stack = torch.stack((spec_f_real, spec_f_imag), dim=4)
 
-        # We use cat instead of subscript assignment (i.e. slice)
+        # Use cat instead of subscript assignment (i.e. slice)
         # to work around an error in the CoreML converter
+        y = spec.detach().clone()
+        y[..., : self.num_freqs, :] = stack
+
         slice = spec[..., self.num_freqs:, :]
-        return torch.cat((stack, slice), 3)
+        z = torch.cat((stack, slice), 3)
+
+        print(z == y)
+
+        return z
 
     @abstractmethod
     def forward_impl(self, spec: Tensor, coefs: Tensor) -> Tensor:
