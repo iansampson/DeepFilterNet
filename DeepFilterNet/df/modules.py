@@ -30,7 +30,6 @@ class Conv2dNormAct(nn.Sequential):
         activation_layer: Optional[Callable[..., torch.nn.Module]] = torch.nn.ReLU,
     ):
         """Causal Conv2d by delaying the signal for any lookahead.
-
         Expected input format: [B, C, T, F]
         """
         lookahead = 0  # This needs to be handled on the input feature side
@@ -87,7 +86,6 @@ class ConvTranspose2dNormAct(nn.Sequential):
         activation_layer: Optional[Callable[..., torch.nn.Module]] = torch.nn.ReLU,
     ):
         """Causal ConvTranspose2d.
-
         Expected input format: [B, C, T, F]
         """
         # Padding on time axis, with lookahead = 0
@@ -234,7 +232,6 @@ class Mask(nn.Module):
 
     def pf(self, mask: Tensor, beta: float = 0.02) -> Tensor:
         """Post-Filter proposed by Valin et al. [1].
-
         Args:
             mask (Tensor): Real valued mask, typically of shape [B, C, T, F].
             beta: Global gain factor.
@@ -269,7 +266,6 @@ class Mask(nn.Module):
 
 class ExponentialUnitNorm(nn.Module):
     """Unit norm for a complex spectrogram.
-
     This should match the rust code:
     ```rust
         for (x, s) in xs.iter_mut().zip(state.iter_mut()) {
@@ -391,10 +387,6 @@ class DfOp(nn.Module):
         padded = spec_pad(
             spec[..., : self.df_bins, :].squeeze(1), self.df_order, self.df_lookahead, dim=-3
         )
-        print("forward_real_unfold")
-        print("padded.shape:", padded.shape)
-        print("self.df_order:", self.df_order)
-        print("padded.unfold(dimension=1, size=self.df_order, step=1)")
         padded = padded.unfold(dimension=1, size=self.df_order, step=1)  # [B, T, F, 2, O]
         padded = padded.permute(0, 1, 4, 2, 3)
         spec_f = torch.empty_like(padded)
@@ -805,7 +797,6 @@ class LocalSnrTarget(nn.Module):
         # clean: [B, 1, T, F]
         # out: [B, T']
         if max_bin is not None:
-            print("LocalSnrTarget.set_forward")
             clean = as_complex(clean[..., :max_bin])
             noise = as_complex(noise[..., :max_bin])
         return (
@@ -821,11 +812,6 @@ def _local_energy(x: Tensor, ws: int, device: torch.device) -> Tensor:
     ws_half = ws // 2
     x = F.pad(x.pow(2).sum(-1).sum(-1), (ws_half, ws_half, 0, 0))
     w = torch.hann_window(ws, device=device, dtype=x.dtype)
-    print("_local_energy")
-    print("x.shape:", x.shape)
-    print("ws:", ws)
-    print("w:", w)
-    print("x.unfold(-1, size=ws, step=1) * w")
     x = x.unfold(-1, size=ws, step=1) * w
     return torch.sum(x, dim=-1).div(ws)
 
@@ -927,8 +913,6 @@ def test_erb():
 def test_unit_norm():
     from df.config import config
     from libdf import unit_norm
-
-    print("test_unit_norm()")
 
     config.use_defaults()
     p = ModelParams()

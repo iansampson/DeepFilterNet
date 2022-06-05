@@ -444,6 +444,7 @@ class DfNet(nn.Module):
             if self.pad_specf:
                 # Only pad the lower part of the spectrum.
                 spec_f = self.pad_spec(spec)
+                
                 # Slice because CoreML does not handle negative padding
                 spec_f = spec_f[:, :, 2:, ...]
                 spec_f = self.df_op(spec_f, df_coefs)

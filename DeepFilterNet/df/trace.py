@@ -68,13 +68,6 @@ def narrow(context, node):
     b = [start + length] * len(x.shape)
     end = mb.select(cond=cond, a=end, b=b)
 
-    # y = [1] * len(x.shape)
-    # y[dimension] = 0
-    # z = begin
-    # z[dimension] = start + length
-    # end = mb.mul(x=end, y=y)
-    # end = mb.add(x=end, y=z)
-
     x = mb.slice_by_index(x=x, begin=begin, end=end)
     context.add(x, torch_name=node.name)
 
@@ -330,55 +323,15 @@ def enhance(
     core_ml_model.save("DeepFilterNet.mlpackage")
 
     core_ml_output = core_ml_model.predict({"spec_1": spec.numpy(),
-    # core_ml_output = core_ml_model.predict({"spec": spec.numpy(),
                                             "feat_erb": erb_feat.numpy(),
                                             "feat_spec": spec_feat.numpy()})
 
     for (key, value) in core_ml_output.items():
-        # print(value.shape)
         if value.shape == spec.shape:
             core_ml_enhanced = torch.from_numpy(value)
-    torch_enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
-
-    # print(torch_enhanced == spec)
-
-    # print("%%%")
-    # print(core_ml_enhanced)
-    # print(torch_enhanced)
-    # print(torch.isclose(core_ml_enhanced, spec))
-    # print("%%%")
-    # print(torch.isclose(core_ml_enhanced, torch_enhanced))
-
-    # core_ml_enhanced = torch.from_numpy(core_ml_output["var_678"])
-
+    # torch_enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
     enhanced = core_ml_enhanced
-    # enhanced = torch_enhanced
-    # enhanced = torch_enhanced.narrow(2, 158, 48)
-    # core_ml_enhanced.narrow(2, 158, 387)
 
-    # print(core_ml_enhanced.shape)
-
-    # is_close = torch.isclose(core_ml_enhanced, torch_enhanced)
-    # print(is_close)
-
-    # window size: 480
-    # 75418 / 261600
-    # window: 158 should have some good audio
-    # test
-
-    # diff = torch.mean(torch_enhanced - enhanced)
-    # print(diff)
-
-    # torch.Size([1, 1, 545, 481, 2])
-
-    # print(core_ml_enhanced - torch_enhanced.numpy())
-
-    # TODO: Consider removing unused outputs from the model
-    # print(core_ml_output["mask_1"].shape)
-    # print(core_ml_output["var_563"].shape)
-    # print(core_ml_output["var_230"].shape)
-
-    # enhanced = torch_enhanced
     enhanced = as_complex(enhanced.squeeze(1))
     if atten_lim_db is not None and abs(atten_lim_db) > 0:
         lim = 10 ** (-abs(atten_lim_db) / 20)
