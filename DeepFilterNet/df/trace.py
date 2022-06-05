@@ -32,7 +32,6 @@ def unfold(context, node):
     inputs = _get_inputs(context, node)
 
     x = inputs[0]
-    x = inputs[0]
     dimension = inputs[1]
     size = inputs[2]
     step = inputs[3]
