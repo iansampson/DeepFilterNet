@@ -262,10 +262,10 @@ def save_audio(
     audio = torch.as_tensor(audio)
     if audio.ndim == 1:
         audio.unsqueeze_(0)
-    if dtype == torch.int16 and audio.dtype != torch.int16:
-        audio = (audio * (1 << 15)).to(torch.int16)
-    if dtype == torch.float32 and audio.dtype != torch.float32:
-        audio = audio.to(torch.float32) / (1 << 15)
+    # if dtype == torch.int16 and audio.dtype != torch.int16:
+    #     audio = (audio * (1 << 15)).to(torch.int16)
+    # if dtype == torch.float32 and audio.dtype != torch.float32:
+    #     audio = audio.to(torch.float32) / (1 << 15)
     ta.save(outpath, audio, sr)
 
 
