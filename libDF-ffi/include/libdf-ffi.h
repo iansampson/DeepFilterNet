@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <complex.h>
 
-int32_t add(int32_t a, int32_t b);
-
-void analysis(const uint8_t *input, uint8_t *output, uintptr_t length);
+void analysis(const float *input, const float complex *output, uintptr_t length);
