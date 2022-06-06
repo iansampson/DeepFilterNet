@@ -1,4 +1,4 @@
-module LibDF {
+module CLibDF {
     header "libdf-ffi.h"
     export *
 }
