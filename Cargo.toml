@@ -3,7 +3,8 @@
 members = [
   "libDF",
   "pyDF",
-  "pyDF-data"
+  "pyDF-data",
+  "libDF-ffi"
 ]
 
 [profile.release]
